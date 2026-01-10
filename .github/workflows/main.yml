@@ -3,14 +3,18 @@ name: Build & Deploy BankApp
 on:
   push:
     branches:
-       main
+      - main
+
+env:
+  BACKEND_IMAGE: bankapp-backend
+  FRONTEND_IMAGE: bankapp-frontend
+  TAG: dev-${{ github.run_number }}
 
 jobs:
   build-deploy:
-    name: build and deploy appBank
+    name: Build and Deploy BankApp
     runs-on: ubuntu-latest
 
-    # Configuration PostgreSQL comme service
     services:
       postgres:
         image: postgres:15
@@ -26,8 +30,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -39,46 +41,87 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
       - name: Build and Test Backend
         run: |
-            cd Bank-Application-BackEnd-Springboot-angular
-            mvn clean install
+          cd Bank-Application-BackEnd-Springboot-angular
+          mvn clean install
         env:
-            SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bankdb_test
-            SPRING_DATASOURCE_USERNAME: postgres
-            SPRING_DATASOURCE_PASSWORD: postgres
-            SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bankdb_test
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
+          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+          SPRING_MAIL_HOST: localhost
+          SPRING_MAIL_PORT: 1025
 
       # ---------------- FRONTEND ----------------
-#      - name: Setup Node
-#        uses: actions/setup-node@v4
-#        with:
-#          node-version: '18'
-#
-#      - name: Build Frontend
-#        run: |
-#          cd frontend
-#          npm ci
-#          npm run build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache Node Modules
+        uses: actions/cache@v3
+        with:
+          path: Bank-Application-FrontEnd-Springboot-angular/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Build Frontend
+        run: |
+          cd Bank-Application-FrontEnd-Springboot-angular
+          npm ci
+          npm run build
 
       # ---------------- DOCKER ----------------
-#      - name: Docker Build Images
-#        run: |
-#          docker build -t $BACKEND_IMAGE:$TAG backend
-#          docker build -t $FRONTEND_IMAGE:$TAG frontend
-#          docker tag $BACKEND_IMAGE:$TAG $BACKEND_IMAGE:latest
-#          docker tag $FRONTEND_IMAGE:$TAG $FRONTEND_IMAGE:latest
-#
-#      # ---------------- DEPLOY ----------------
-#      - name: Deploy to Minikube
-#        run: |
-#          sed -i 's|backend:.*|backend:'"$TAG"'|g' k8s/backend-deployment.yaml
-#          sed -i 's|frontend:.*|frontend:'"$TAG"'|g' k8s/frontend-deployment.yaml
-#
-#          kubectl apply -f k8s/
-#
-#      - name: Verify Rollout
-#        run: |
-#          kubectl rollout status deployment/backend
-#          kubectl rollout status deployment/frontend
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Images
+        run: |
+          # Backend
+          cd Bank-Application-BackEnd-Springboot-angular
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:latest
+          
+          # Frontend
+          cd ../Bank-Application-FrontEnd-Springboot-angular
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:latest
+
+      # ---------------- DEPLOY TO MINIKUBE ----------------
+      - name: Setup Minikube
+        uses: medyagh/setup-minikube@latest
+        with:
+          minikube-version: 'latest'
+          kubernetes-version: 'v1.28.0'
+
+      - name: Deploy to Minikube
+        run: |
+          # Mettre à jour les images dans les manifests
+          sed -i "s|image:.*backend.*|image: ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }}|g" k8s/backend-deployment.yaml
+          sed -i "s|image:.*frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}|g" k8s/frontend-deployment.yaml
+          
+          # Appliquer les manifests
+          kubectl apply -f k8s/
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/backend --timeout=5m
+          kubectl rollout status deployment/frontend --timeout=5m
+          kubectl get pods
+          kubectl get services
