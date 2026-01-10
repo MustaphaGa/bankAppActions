@@ -10,10 +10,23 @@ jobs:
     name: build and deploy appBank
     runs-on: ubuntu-latest
 
-#    env:
-#      BACKEND_IMAGE: backend
-#      FRONTEND_IMAGE: frontend
-#      TAG: dev-${{ github.run_number }}
+    # Configuration PostgreSQL comme service
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bankdb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+
 
     steps:
       - name: Checkout source
@@ -26,12 +39,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Test Backend
-        run: mvn -B test --file Bank-Application-BackEnd-Springboot-angular/pom.xml
-      - name: build Backend
+      - name: Build and Test Backend
         run: |
-          mvn clean 
-          mvn -B package --file Bank-Application-BackEnd-Springboot-angular/pom.xml
+            cd Bank-Application-BackEnd-Springboot-angular
+            mvn clean install
+          env:
+            SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bankdb_test
+            SPRING_DATASOURCE_USERNAME: postgres
+            SPRING_DATASOURCE_PASSWORD: postgres
+            SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
 
 
       # ---------------- FRONTEND ----------------
