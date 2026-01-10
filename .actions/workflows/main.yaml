@@ -1,0 +1,64 @@
+name: Build & Deploy BankApp
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-deploy:
+    runs-on: self-hosted
+
+    env:
+      BACKEND_IMAGE: backend
+      FRONTEND_IMAGE: frontend
+      TAG: dev-${{ github.run_number }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ---------------- BACKEND ----------------
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build & Test Backend
+        run: |
+          cd backend
+          mvn clean verify
+
+      # ---------------- FRONTEND ----------------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      # ---------------- DOCKER ----------------
+      - name: Docker Build Images
+        run: |
+          docker build -t $BACKEND_IMAGE:$TAG backend
+          docker build -t $FRONTEND_IMAGE:$TAG frontend
+          docker tag $BACKEND_IMAGE:$TAG $BACKEND_IMAGE:latest
+          docker tag $FRONTEND_IMAGE:$TAG $FRONTEND_IMAGE:latest
+
+      # ---------------- DEPLOY ----------------
+      - name: Deploy to Minikube
+        run: |
+          sed -i 's|backend:.*|backend:'"$TAG"'|g' k8s/backend-deployment.yaml
+          sed -i 's|frontend:.*|frontend:'"$TAG"'|g' k8s/frontend-deployment.yaml
+
+          kubectl apply -f k8s/
+
+      - name: Verify Rollout
+        run: |
+          kubectl rollout status deployment/backend
+          kubectl rollout status deployment/frontend
