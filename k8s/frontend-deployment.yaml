@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: yourusername/bankapp-frontend:latest
+          image: devtizi/bankapp-frontend:latest
           ports:
             - containerPort: 80
 ---

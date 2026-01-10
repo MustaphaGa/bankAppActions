@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: yourusername/bankapp-backend:latest
+          image: devtizi/bankapp-backend:latest
           ports:
             - containerPort: 8080
           env:
