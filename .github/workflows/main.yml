@@ -43,7 +43,7 @@ jobs:
         run: |
             cd Bank-Application-BackEnd-Springboot-angular
             mvn clean install
-          env:
+        env:
             SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/bankdb_test
             SPRING_DATASOURCE_USERNAME: postgres
             SPRING_DATASOURCE_PASSWORD: postgres
