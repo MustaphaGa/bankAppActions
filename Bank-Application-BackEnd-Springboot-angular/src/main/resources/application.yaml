@@ -1,31 +1,31 @@
-spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/musta
-    username: postgres
-    password: tizi
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    database: postgresql
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  doc:
-      default-produces-media-type: application/json
-
-  mail:
-   host: smtp.gmail.com
-   port: 587
-   username: ga
-   password: flqk fqlf cwmf xwoo
-   properties:
-     mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          ssl:
-            trust: smtp.gmail.com
+#spring:
+#  datasource:
+#    driver-class-name: org.postgresql.Driver
+#    url: jdbc:postgresql://localhost:5432/musta
+#    username: postgres
+#    password: tizi
+#
+#  jpa:
+#    hibernate:
+#      ddl-auto: update
+#    database: postgresql
+#    properties:
+#      hibernate:
+#        dialect: org.hibernate.dialect.PostgreSQLDialect
+#  doc:
+#      default-produces-media-type: application/json
+#
+#  mail:
+#   host: smtp.gmail.com
+#   port: 587
+#   username: ga
+#   password: flqk fqlf cwmf xwoo
+#   properties:
+#     mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
+#            required: true
+#          ssl:
+#            trust: smtp.gmail.com
