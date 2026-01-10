@@ -1,0 +1,45 @@
+<div class="p-3">
+    <h3>PROFILE</h3>
+    <div class="d-flex flex-row justify-content-between">
+        
+        <div class="card p-3 col-6 me-1">
+            <h4>Person Info</h4>
+            <div class="mb-3">
+                <label for="FirstName" class="form-label">FirstName </label>
+                <input [(ngModel)]="userDto.firstName" type="FirstName" class="form-control" id="FirstName" placeholder="Enter FirstName">
+            </div>
+            <div class="mb-3">
+                <label for="LastName" class="form-label">LastName </label>
+                <input [(ngModel)]="userDto.lastName" type="LastName" class="form-control" id="LastName" placeholder="Enter LastName">
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email </label>
+                <input [(ngModel)]="userDto.email" type="email" class="form-control" id="email" placeholder="email">
+            </div>
+        </div>
+        <div class="card p-3 col-6">
+            <h4>Adress Info</h4>
+            <div class="mb-3">
+                <label for="street" class="form-label">STREET </label>
+                <input type="text" class="form-control" id="street" placeholder="Enter street">
+            </div>
+            <div class="mb-3">
+                <label for="house-number" class="form-label">House number </label>
+                <input type="text" class="form-control" id="house-number" placeholder="Enter house-number">
+            </div>
+            <div class="mb-3">
+                <label for="city" class="form-label">CITY </label>
+                <input type="text" class="form-control" id="city" placeholder="city">
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end p-3 me-3 mb-3">
+        <button type="button" class="btn btn-link" (click)="goBack()">
+            Cancel
+        </button>
+        <button type="button" class="btn btn-primary">
+            <em class="fas fa-save">&nbsp; </em>Save
+        </button>
+    </div>
+
+</div>

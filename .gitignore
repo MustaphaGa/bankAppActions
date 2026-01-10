@@ -1,0 +1,24 @@
+# Angular
+**/.angular/
+**/node_modules/
+**/dist/
+*.log
+
+# Spring Boot
+**/target/
+**/.settings/
+**/.classpath
+**/.project
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo

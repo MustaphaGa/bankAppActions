@@ -1,0 +1,51 @@
+<div class="p-2 mt-0">
+    <h4>new-transaction</h4>
+    <h5>Your account balance : {{accountBalance}} $</h5>
+    <div class="alert alert-danger" role="alert" *ngIf="errorMessages.length">
+        <div *ngFor="let msg of errorMessages">{{msg}}</div>
+    </div>
+    <div class=" card">
+
+
+        <div class="m-lg-1">
+            <label class="form-label">Transaction Type </label>
+            <select [(ngModel)]="transactionDto.type" class="form-select">
+                <option [ngValue]="'DEPOSIT'">DEPOSIT</option>
+                <option [ngValue]="'TRANSFERT'">TRANSFERT</option>
+            </select>
+        </div>
+
+        <div class="m-lg-1" *ngIf="transactionDto.type === 'TRANSFERT'">
+            <label class="form-label">Choose a Contact </label>
+            <select class="form-select" [(ngModel)]="selectedContact" (change)="onContactChange()">
+                <option *ngFor="let contact of contacts" [ngValue]="contact">
+                    {{contact.firstName + ' '+ contact.lastName}}</option>
+            </select>
+        </div>
+        <div class="m-lg-1" *ngIf="transactionDto.type === 'TRANSFERT'">
+            <label for="iban" class="form-label">IBAN </label>
+            <input [(ngModel)]="iban" type="text" class="form-control" readonly>
+        </div>
+
+        <div class="m-lg-1" *ngIf="transactionDto.type ">
+            <label for="amount" class="form-label">Amount </label>
+            <input [(ngModel)]="transactionDto.amount" type="amount" class="form-control" id="amount"
+                placeholder="Amount">
+        </div>
+
+
+
+
+
+        <div class="d-flex justify-content-end  me-3 mb-3">
+            <button (click)="cancel()" type="button" class="btn btn-link">
+                Cancel
+            </button>
+            <button (click)="saveTransaction()" type="button" class="btn btn-primary">
+                <em class="fas fa-save">&nbsp; </em>Save
+            </button>
+        </div>
+
+    </div>
+
+</div>

@@ -1,0 +1,30 @@
+<div>
+    <div>
+        <h3 style="text-align: center;">My Acount</h3>
+        <div class="d-flex flex-row justify-content-between card  p-3  ">
+            <app-info-light *ngFor="let info of accountInfoList" [infoInput]="info"></app-info-light>
+        </div>
+    </div>
+    <div class="card m-3 p-3">
+
+        <div class="d-flex flex-row align-items-start mb-3">
+            <div class="me-3">
+                <label class="form-label">Start date</label>
+                <input type="date" [(ngModel)]="startDate" class="form-control">
+            </div>
+            <div class="me-3">
+                <label class="form-label">End date</label>
+                <input type="date" [(ngModel)]="endDate" class="form-control">
+            </div>
+            <button (click)="loadChartData()" class="btn btn-primary">
+                <em class="fas fa-search"></em>&nbsp;Search
+            </button>
+        </div>
+        <div class="card align-items-center ">
+            <h4 class="mb-3">Transactions Over Time</h4>
+            <canvas baseChart [data]="chartData" [type]="chartType" [options]="chartOptions"
+            style="max-width: 800px; max-height: 400px;">
+            </canvas>
+        </div>
+    </div>
+</div>
