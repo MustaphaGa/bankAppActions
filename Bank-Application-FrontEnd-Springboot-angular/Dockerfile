@@ -24,11 +24,11 @@ RUN npm run build -- --configuration production
 FROM node:20-alpine
 WORKDIR /app
 
-# Installer un serveur statique léger
 RUN npm install -g serve
 
-# ⚠️ Remplace bancAppFront si nécessaire
-COPY --from=build /app/dist/bancAppFront ./dist
+# Copier tout dist (peu importe le nom du projet)
+COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 CMD ["serve", "-s", "dist", "-l", "3000"]
+
