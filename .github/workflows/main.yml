@@ -28,7 +28,7 @@ jobs:
 
       - name: Test Backend
         run: mvn -B test --file Bank-Application-BackEnd-Springboot-angular/pom.xml
-      - name: Test Backend
+      - name: build Backend
         run: |
           mvn clean 
           mvn -B package --file Bank-Application-BackEnd-Springboot-angular/pom.xml
