@@ -139,3 +139,31 @@ jobs:
           kubectl rollout status deployment/frontend --timeout=5m
           kubectl get pods
           kubectl get services
+      # ... (après l'étape "Deploy to Minikube")
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/backend --timeout=5m
+          kubectl rollout status deployment/frontend --timeout=5m
+          kubectl get pods
+          kubectl get services
+
+      # --- NOUVELLE ÉTAPE DE DÉBOGAGE ---
+      # Cette étape ne s'exécute que si l'étape précédente a échoué.
+      # Elle collecte les informations nécessaires pour comprendre pourquoi.
+      - name: Debug Kubernetes on Failure
+        if: failure()
+        run: |
+          echo "--- Détails des Pods ---"
+          kubectl get pods -o wide
+
+          echo "--- Description du Pod Backend (le plus récent) ---"
+          # Récupère le nom du premier pod du backend
+          BACKEND_POD=$(kubectl get pods -l app=backend -o jsonpath='{.items[0].metadata.name}')
+          kubectl describe pod $BACKEND_POD
+
+          echo "--- Logs du Pod Backend ---"
+          kubectl logs $BACKEND_POD
+
+          echo "--- Logs du Pod Backend (précédent crash, si applicable) ---"
+          kubectl logs $BACKEND_POD --previous
