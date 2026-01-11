@@ -34,18 +34,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ⭐ LIBÉRER L'ESPACE DISQUE DÈS LE DÉBUT
-      - name: Free Disk Space
-        run: |
-          echo "=== Avant nettoyage ==="
-          df -h
-          docker system prune -a -f
-          docker volume prune -f
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          echo "=== Après nettoyage ==="
-          df -h
-
       # ---------------- BACKEND ----------------
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -92,150 +80,62 @@ jobs:
           npm ci
           npm run build
 
-      # ⭐ DÉMARRER MINIKUBE AVANT DE BUILDER LES IMAGES
+      # ---------------- DOCKER ----------------
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Images
+        run: |
+          # Backend
+          cd Bank-Application-BackEnd-Springboot-angular
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:latest
+          
+          # Frontend
+          cd ../Bank-Application-FrontEnd-Springboot-angular
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:latest
+
+      # --- NOUVELLE ÉTAPE : Nettoyage de l'espace Docker ---
+      # Cette étape nettoie l'environnement Docker pour éviter les erreurs de manque d'espace disque
+      # avant de lancer des opérations lourdes comme la configuration de Minikube.
+      - name: Free up Docker disk space
+        run: docker system prune -f -a
+
+      # ---------------- DEPLOY TO MINIKUBE ----------------
       - name: Setup Minikube
         uses: medyagh/setup-minikube@latest
         with:
           minikube-version: 'latest'
           kubernetes-version: 'v1.28.0'
-          start-args: '--force'
 
-      # ⭐ CONSTRUIRE LES IMAGES DIRECTEMENT DANS MINIKUBE
-      - name: Build Docker Images in Minikube
-        run: |
-          # Pointer Docker vers le daemon de Minikube
-          eval $(minikube docker-env)
-          
-          echo "=== Building Backend Image ==="
-          cd Bank-Application-BackEnd-Springboot-angular
-          docker build -t ${{ env.BACKEND_IMAGE }}:${{ env.TAG }} .
-          docker tag ${{ env.BACKEND_IMAGE }}:${{ env.TAG }} ${{ env.BACKEND_IMAGE }}:latest
-          
-          echo "=== Building Frontend Image ==="
-          cd ../Bank-Application-FrontEnd-Springboot-angular
-          docker build -t ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} .
-          docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} ${{ env.FRONTEND_IMAGE }}:latest
-          
-          echo "=== Images disponibles dans Minikube ==="
-          docker images | grep bankapp
+      # --- NOUVELLE ÉTAPE : Configuration de kubectl ---
+      # Cette étape installe la version de kubectl qui correspond exactement à la version
+      # de Kubernetes démarrée par Minikube, évitant ainsi les incompatibilités.
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
 
-      # ⭐ OPTIONNEL : Push vers Docker Hub pour sauvegarde
-      - name: Push to Docker Hub (Optional)
-        if: success()
-        run: |
-          # Revenir au Docker host
-          eval $(minikube docker-env -u)
-          
-          # Login
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          
-          # Sauvegarder les images depuis Minikube
-          minikube image save ${{ env.BACKEND_IMAGE }}:${{ env.TAG }} -o backend.tar
-          minikube image save ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} -o frontend.tar
-          
-          # Charger dans Docker host
-          docker load -i backend.tar
-          docker load -i frontend.tar
-          
-          # Tag et push
-          docker tag ${{ env.BACKEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }}
-          docker tag ${{ env.BACKEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:latest
-          docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}
-          docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }} ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:latest
-          
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:latest
-          
-          # Nettoyer
-          rm -f backend.tar frontend.tar
-
-      # ⭐ METTRE À JOUR LES MANIFESTS KUBERNETES
-      - name: Update Kubernetes Manifests
+      - name: Deploy to Minikube
         run: |
           # Mettre à jour les images dans les manifests
-          sed -i "s|image:.*backend.*|image: ${{ env.BACKEND_IMAGE }}:${{ env.TAG }}|g" k8s/backend-deployment.yaml
-          sed -i "s|image:.*frontend.*|image: ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}|g" k8s/frontend-deployment.yaml
+          sed -i "s|image:.*backend.*|image: ${{ secrets.DOCKER_USERNAME }}/${{ env.BACKEND_IMAGE }}:${{ env.TAG }}|g" k8s/backend-deployment.yaml
+          sed -i "s|image:.*frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}|g" k8s/frontend-deployment.yaml
           
-          # Ajouter imagePullPolicy: Never (CRITIQUE pour Minikube)
-          if ! grep -q "imagePullPolicy: Never" k8s/backend-deployment.yaml; then
-            sed -i "/image: ${{ env.BACKEND_IMAGE }}/a\        imagePullPolicy: Never" k8s/backend-deployment.yaml
-          fi
-          
-          if ! grep -q "imagePullPolicy: Never" k8s/frontend-deployment.yaml; then
-            sed -i "/image: ${{ env.FRONTEND_IMAGE }}/a\        imagePullPolicy: Never" k8s/frontend-deployment.yaml
-          fi
-          
-          echo "=== Backend Deployment ==="
-          cat k8s/backend-deployment.yaml
-          echo ""
-          echo "=== Frontend Deployment ==="
-          cat k8s/frontend-deployment.yaml
-
-      # ⭐ DÉPLOYER SUR KUBERNETES
-      - name: Deploy to Kubernetes
-        run: |
-          # Appliquer tous les manifests
+          # Appliquer les manifests
           kubectl apply -f k8s/
-          
-          echo "=== Attente du déploiement Backend ==="
-          kubectl wait --for=condition=available --timeout=300s deployment/backend || {
-            echo "❌ Backend deployment échoué"
-            kubectl get pods -l app=backend
-            kubectl describe pods -l app=backend
-            kubectl logs -l app=backend --tail=100 || true
-            exit 1
-          }
-          
-          echo "=== Attente du déploiement Frontend ==="
-          kubectl wait --for=condition=available --timeout=300s deployment/frontend || {
-            echo "❌ Frontend deployment échoué"
-            kubectl get pods -l app=frontend
-            kubectl describe pods -l app=frontend
-            kubectl logs -l app=frontend --tail=100 || true
-            exit 1
-          }
 
-      # ⭐ VÉRIFICATION FINALE
       - name: Verify Deployment
         run: |
-          echo "=== 📦 PODS ==="
-          kubectl get pods -o wide
-          
-          echo ""
-          echo "=== 🌐 SERVICES ==="
+          kubectl rollout status deployment/backend --timeout=5m
+          kubectl rollout status deployment/frontend --timeout=5m
+          kubectl get pods
           kubectl get services
-          
-          echo ""
-          echo "=== 🚀 DEPLOYMENTS ==="
-          kubectl get deployments
-          
-          echo ""
-          echo "=== ✅ Application déployée avec succès ! ==="
-
-      # ⭐ DEBUG EN CAS D'ÉCHEC
-      - name: Debug on Failure
-        if: failure()
-        run: |
-          echo "=== 🔍 DIAGNOSTIC ==="
-          echo ""
-          echo "=== Tous les Pods ==="
-          kubectl get pods -A
-          
-          echo ""
-          echo "=== Events ==="
-          kubectl get events --sort-by='.lastTimestamp' | tail -20
-          
-          echo ""
-          echo "=== Backend Pods Details ==="
-          kubectl describe pods -l app=backend || true
-          
-          echo ""
-          echo "=== Frontend Pods Details ==="
-          kubectl describe pods -l app=frontend || true
-          
-          echo ""
-          echo "=== Images dans Minikube ==="
-          eval $(minikube docker-env)
-          docker images | grep bankapp || echo "Aucune image bankapp trouvée !"
