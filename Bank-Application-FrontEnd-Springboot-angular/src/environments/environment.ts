@@ -1,5 +1,5 @@
 export const environment = {
 
     production : true,
-    apiUrl : '/api'
+    apiUrl : 'this is the url production env '
 };

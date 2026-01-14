@@ -1,35 +1,19 @@
-#spring:
-#  datasource:
-#    driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://localhost:5432/musta
-#    username: postgres
-#    password: tizi
-#
-#  jpa:
-#    hibernate:
-#      ddl-auto: update
-#    database: postgresql
-#    properties:
-#      hibernate:
-#        dialect: org.hibernate.dialect.PostgreSQLDialect
-#  doc:
-#      default-produces-media-type: application/json
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://postgres:5432/bankdb
+    url: jdbc:postgresql://localhost:5432/musta
     username: postgres
-    password: postgres
+    password: tizi
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     database: postgresql
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   doc:
-    default-produces-media-type: application/json
+      default-produces-media-type: application/json
 
 
   mail:
