@@ -52,7 +52,7 @@ public class SecurityConfig {
                                                  "/configuration/security",
                                                  "/swagger-ui/**",
                                                  "/webjars/**",
-                                                 "/swagger-ui.html"
+                                                     "/swagger-ui.html"
                                          )
                     .permitAll()
                     .anyRequest()
@@ -79,7 +79,9 @@ public class SecurityConfig {
         final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         final CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.setAllowedOrigins(Arrays.asList("http://localhost:4200", "http://locahost:5300/node"));
+        config.setAllowedOriginPatterns(Arrays.asList("*"));
+
+//        config.setAllowedOrigins(Arrays.asList("http://localhost:4200", "http://localhost:5300/node","http://localhost:30420"));
         config.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         source.registerCorsConfiguration("/**", config);

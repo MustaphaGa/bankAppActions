@@ -14,7 +14,10 @@ spec:
     spec:
       containers:
         - name: backend
-          image: devtizi/bankapp-backend:latest
+#          image: devtizi/bankapp-backend:latest
+          image: bankapp-backend:latest
+          imagePullPolicy: Never
+
           ports:
             - containerPort: 8080
           env:
@@ -24,6 +27,8 @@ spec:
               value: postgres
             - name: SPRING_DATASOURCE_PASSWORD
               value: postgres
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: update
 ---
 apiVersion: v1
 kind: Service
@@ -36,3 +41,4 @@ spec:
     - port: 8080
       targetPort: 8080
   type: ClusterIP
+

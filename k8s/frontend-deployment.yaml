@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: devtizi/bankapp-frontend:latest
+          image: bankapp-frontend:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 80
 ---
@@ -23,9 +24,11 @@ kind: Service
 metadata:
   name: frontend
 spec:
+  type: NodePort
   selector:
     app: frontend
   ports:
-    - port: 80
+    - protocol: TCP  # ⭐ Ajout du protocole
+      port: 80
       targetPort: 80
-  type: LoadBalancer
+      nodePort: 30080
